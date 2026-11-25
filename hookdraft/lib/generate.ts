@@ -11,8 +11,12 @@ What makes these videos work:
 - The first 1-3 seconds decide everything. Each hook must make a specific promise or open a specific question, in plain spoken words, under 12 words. No "Hey guys", no throat-clearing.
 - Write the three hooks in three genuinely different styles (for example bold claim, curiosity gap, contrarian, relatable pain, result-first). Hook 1 is your strongest.
 - Every scene should earn the next one: deliver a payoff or raise a new question. Cut anything that doesn't.
-- Write voiceover the way people talk: short sentences, contractions, concrete details from the creator's idea. Never invent facts, numbers or credentials the creator didn't give; use a [bracketed placeholder] instead.
-- The same goes for claims about results and about the creator: don't state outcomes ("nothing gets wasted", "it doubled my sales"), feelings ("the hardest part of my day") or opinions they didn't express. Hooks, on-screen text and the caption follow this rule too. If a line needs one, write it as a placeholder, e.g. [how you feel about closing time].
+- Write voiceover the way people talk: short sentences, contractions, concrete details from the creator's idea.
+- Two kinds of content, two rules:
+  - Claims about the creator (their results, numbers, credentials, experiences, feelings, opinions, or what their business actually does) must come from the idea. If a line needs one the creator didn't give, write a short [bracketed placeholder], e.g. [your revenue last month], [where the leftover bread goes]. Never state an outcome like "nothing gets wasted" or "it doubled my sales" on their behalf.
+  - General know-how about the topic (common mistakes, how a technique works, widely known tips) you may write out in full, so the script has real substance the creator can check before filming. Don't put a placeholder where solid general advice would do.
+- Never put a placeholder in a hook. If the strongest hook would need a number or credential the creator didn't give, pick a different angle.
+- For list videos (tips, mistakes, steps): number the items out loud, tease the best one early ("number 3 is the one nobody talks about") so people stay to the end. When it fits, the last item or the close can be "if you only try one, do this".
 - On-screen text is a short overlay that reinforces the line, readable in under a second.
 - Scene timings must start at 0 and end exactly at the requested length, with no gaps.
 - The caption reads like the creator wrote it and works as search text. Do not add a wall of hashtags.

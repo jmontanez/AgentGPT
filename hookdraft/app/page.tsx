@@ -2,10 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { LENGTHS, PLATFORMS, type Script } from "@/lib/schema";
+import { SAMPLE_SCRIPT } from "@/lib/sample";
 
-const FREE_SCRIPTS = 3;
+// One free script to show what HookDraft does, then the upgrade link.
+const FREE_SCRIPTS = 1;
 const USED_KEY = "hookdraft.used";
 const PAYMENT_LINK = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK;
+
+type Platform = (typeof PLATFORMS)[number];
+type Length = (typeof LENGTHS)[number];
+
+// One tap fills the form, so a first-time visitor gets to a real script without having to think of an idea.
+const EXAMPLE_IDEAS: { label: string; idea: string; platform: Platform; lengthSeconds: Length }[] = [
+  { label: "Meal prep on a budget", idea: "How I meal prep a week of lunches for under $30", platform: "TikTok", lengthSeconds: 30 },
+  { label: "Desk posture mistakes", idea: "3 posture mistakes I see every day as a physical therapist, from people who work at a desk", platform: "Instagram Reels", lengthSeconds: 30 },
+  { label: "Behind the counter", idea: "Small bakery owner: what happens to the unsold bread at closing time", platform: "YouTube Shorts", lengthSeconds: 30 },
+];
 
 function readUsed(): number {
   try {
@@ -45,14 +57,16 @@ function scriptToText(script: Script, hookIndex: number): string {
 
 export default function Home() {
   const [idea, setIdea] = useState("");
-  const [platform, setPlatform] = useState<(typeof PLATFORMS)[number]>("Instagram Reels");
-  const [lengthSeconds, setLengthSeconds] = useState<(typeof LENGTHS)[number]>(30);
+  const [platform, setPlatform] = useState<Platform>("Instagram Reels");
+  const [lengthSeconds, setLengthSeconds] = useState<Length>(30);
   const [script, setScript] = useState<Script | null>(null);
   const [hookIndex, setHookIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [used, setUsed] = useState(0);
+  const [scriptKey, setScriptKey] = useState(0);
+  const [shownLength, setShownLength] = useState<Length>(30);
 
   useEffect(() => setUsed(readUsed()), []);
 
@@ -73,6 +87,8 @@ export default function Home() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.script) throw new Error(data.error ?? "Something went wrong. Try again.");
       setScript(data.script);
+      setShownLength(lengthSeconds);
+      setScriptKey((k) => k + 1);
       setHookIndex(0);
       const next = used + 1;
       setUsed(next);
@@ -113,6 +129,21 @@ export default function Home() {
           onChange={(e) => setIdea(e.target.value)}
           maxLength={2000}
         />
+        {!script && (
+          <div className="examples">
+            <span className="examples-label">Or try one:</span>
+            {EXAMPLE_IDEAS.map((ex) => (
+              <button
+                key={ex.label}
+                type="button"
+                className="chip"
+                onClick={() => { setIdea(ex.idea); setPlatform(ex.platform); setLengthSeconds(ex.lengthSeconds); }}
+              >
+                {ex.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="row">
@@ -132,7 +163,7 @@ export default function Home() {
 
       {outOfFree ? (
         <div className="notice">
-          <div>You’ve used your {FREE_SCRIPTS} free scripts.</div>
+          <div>You’ve used your free {FREE_SCRIPTS === 1 ? "script" : "scripts"}. Upgrade to keep writing.</div>
           {PAYMENT_LINK ? (
             <a className="btn btn-primary" style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }} href={PAYMENT_LINK}>
               Upgrade for unlimited scripts
@@ -149,48 +180,81 @@ export default function Home() {
 
       {error && <div className="error" role="alert">{error}</div>}
 
-      {script && (
-        <>
-          <section className="field" aria-labelledby="hooks-h">
-            <h2 id="hooks-h" className="label" style={{ margin: 0 }}>Pick a hook</h2>
-            <div className="hooks">
-              {script.hooks.map((h, i) => (
-                <button key={i} type="button" className="hook" aria-pressed={i === hookIndex} onClick={() => { setHookIndex(i); setCopied(false); }}>
-                  <span className="hook-style">{h.style}</span>
-                  <span className="hook-line">{h.line}</span>
-                  <span className="hook-why">{h.why}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="field" aria-labelledby="scenes-h">
-            <h2 id="scenes-h" className="label" style={{ margin: 0 }}>Scenes · {lengthSeconds}s</h2>
-            <div className="scenes">
-              {script.scenes.map((s, i) => (
-                <div key={i} className="scene">
-                  <div className="scene-time">{s.start}–{s.end}s</div>
-                  <div className="scene-body">
-                    <div>{sceneLine(script, hookIndex, i)}</div>
-                    <div className="scene-shot">{s.shot}</div>
-                    {s.onScreenText && <div className="scene-text"><b>Text:</b> {s.onScreenText}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="field" aria-labelledby="caption-h">
-            <h2 id="caption-h" className="label" style={{ margin: 0 }}>Caption</h2>
-            <div className="caption">{script.caption}</div>
-          </section>
-
+      {loading ? (
+        <ScriptSkeleton />
+      ) : script ? (
+        <div className="reveal" key={scriptKey}>
+          <ScriptView script={script} hookIndex={hookIndex} lengthSeconds={shownLength} onPickHook={(i) => { setHookIndex(i); setCopied(false); }} />
           <div className="actions">
             <button type="button" className="btn" onClick={generate} disabled={loading || outOfFree}>Regenerate</button>
             <button type="button" className="btn btn-strong" onClick={copy}>{copied ? "Copied" : "Copy script"}</button>
           </div>
-        </>
+        </div>
+      ) : (
+        <div className="preview" aria-label="Example of what you'll get">
+          <div className="preview-tag">Example output</div>
+          <ScriptView script={SAMPLE_SCRIPT} hookIndex={0} lengthSeconds={30} />
+        </div>
       )}
     </main>
+  );
+}
+
+function ScriptView({ script, hookIndex, lengthSeconds, onPickHook }: { script: Script; hookIndex: number; lengthSeconds: number; onPickHook?: (i: number) => void }) {
+  return (
+    <div className="script">
+      <section className="field" aria-labelledby={onPickHook ? "hooks-h" : undefined}>
+        <h2 id={onPickHook ? "hooks-h" : undefined} className="label" style={{ margin: 0 }}>{onPickHook ? "Pick a hook" : "3 hooks to choose from"}</h2>
+        <div className="hooks">
+          {script.hooks.map((h, i) => (
+            <button
+              key={i}
+              type="button"
+              className="hook"
+              aria-pressed={i === hookIndex}
+              onClick={onPickHook ? () => onPickHook(i) : undefined}
+              tabIndex={onPickHook ? undefined : -1}
+            >
+              <span className="hook-style">{h.style}</span>
+              <span className="hook-line">{h.line}</span>
+              <span className="hook-why">{h.why}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="field">
+        <h2 className="label" style={{ margin: 0 }}>Scenes · {lengthSeconds}s</h2>
+        <div className="scenes">
+          {script.scenes.map((s, i) => (
+            <div key={i} className="scene">
+              <div className="scene-time">{s.start}–{s.end}s</div>
+              <div className="scene-body">
+                <div>{sceneLine(script, hookIndex, i)}</div>
+                <div className="scene-shot">{s.shot}</div>
+                {s.onScreenText && <div className="scene-text"><b>Text:</b> {s.onScreenText}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="field">
+        <h2 className="label" style={{ margin: 0 }}>Caption</h2>
+        <div className="caption">{script.caption}</div>
+      </section>
+    </div>
+  );
+}
+
+function ScriptSkeleton() {
+  return (
+    <div className="skeleton" role="status" aria-live="polite">
+      <span className="sr-only">Writing your script…</span>
+      <div className="sk sk-label" />
+      {[0, 1, 2].map((i) => <div key={i} className="sk sk-hook" style={{ animationDelay: `${i * 120}ms` }} />)}
+      <div className="sk sk-label" />
+      {[0, 1, 2, 3].map((i) => <div key={i} className="sk sk-line" style={{ animationDelay: `${i * 90}ms` }} />)}
+    </div>
   );
 }

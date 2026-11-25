@@ -26,6 +26,6 @@ To test real generation, run the dev server without `HOOKDRAFT_MOCK`, then `node
 
 - **Replace the API key before going live.** The current "Hookdraft" key is a 30-day testing key (expires Dec 25, 2026). Make a new production key with a longer expiry, set it in the hosting provider's environment variables, then delete the testing key in the Claude Console.
 
-- The 3-free-scripts limit is stored in the browser, so it's easy to get around. Before launch, add sign-in and count usage on the server.
+- The 1-free-script limit (`FREE_SCRIPTS` in `app/page.tsx`) is stored in the browser, so it's easy to get around. Before launch, add sign-in and count usage on the server.
 - Payments: set `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` to a Stripe Payment Link. Paid accounts aren't recognized yet.
 - No rate limiting on `/api/generate`.

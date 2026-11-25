@@ -62,4 +62,43 @@ button, textarea, select { font: inherit; color: inherit; }
 .scene-text b { font-weight: 600; color: var(--accent); }
 
 .caption { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 12px; font-size: 14px; line-height: 1.45; }
+.script { display: flex; flex-direction: column; gap: 20px; }
+.reveal { display: flex; flex-direction: column; gap: 20px; }
+
+/* Try-an-example chips */
+.examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.examples-label { font-size: 13px; color: var(--muted); }
+.chip { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 7px 12px; font-size: 13px; cursor: pointer; transition: border-color 150ms ease; }
+.chip:hover { border-color: var(--accent); }
+
+/* Example output shown before the first script, so the page is never empty */
+.preview { display: flex; flex-direction: column; gap: 12px; opacity: 0.55; pointer-events: none; user-select: none; max-height: 620px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent); mask-image: linear-gradient(to bottom, #000 55%, transparent); }
+.preview-tag { align-self: flex-start; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 4px 10px; }
+
+/* Loading skeleton */
+.skeleton { display: flex; flex-direction: column; gap: 10px; }
+.sk { border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.sk-label { height: 12px; width: 120px; border-radius: 6px; margin-top: 8px; }
+.sk-hook { height: 74px; }
+.sk-line { height: 18px; border-radius: 8px; }
+.sk-line:nth-child(odd) { width: 85%; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Tiny animations */
+.btn { transition: transform 120ms ease, filter 150ms ease; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+.btn-primary:not(:disabled):hover { filter: brightness(1.06); }
+.hook[aria-pressed="true"] { animation: pop 220ms ease-out; }
+.reveal > *, .reveal .script > * { animation: rise 360ms ease-out both; }
+.reveal .script > :nth-child(2) { animation-delay: 80ms; }
+.reveal .script > :nth-child(3) { animation-delay: 160ms; }
+.reveal > .actions { animation-delay: 220ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.02); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .sk, .hook, .reveal > *, .reveal .script > * { animation: none; }
+  .btn, .chip { transition: none; }
+}
+
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
