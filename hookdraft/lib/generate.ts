@@ -20,24 +20,33 @@ What makes these videos work:
 const client = new Anthropic();
 
 export class GenerationRefused extends Error {}
+export class MissingApiKey extends Error {}
 
 export async function generateScript(req: GenerateRequest): Promise<Script> {
   if (process.env.HOOKDRAFT_MOCK === "1") return SAMPLE_SCRIPT;
 
-  const response = await client.beta.messages.parse({
-    model: "claude-opus-5-5",
-    max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: "medium", format: betaZodOutputFormat(Script) },
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`,
-      },
-    ],
-  });
+  const response = await client.beta.messages
+    .parse({
+      model: "claude-opus-5-5",
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "medium", format: betaZodOutputFormat(Script) },
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`,
+        },
+      ],
+    })
+    .catch((error: unknown) => {
+      // The SDK throws a plain Error, before any request is sent, when no key or login is configured.
+      if (error instanceof Error && error.message.startsWith("Could not resolve authentication method")) {
+        throw new MissingApiKey(error.message);
+      }
+      throw error;
+    });
 
   if (response.stop_reason === "refusal") {
     throw new GenerationRefused("This idea couldn't be scripted. Try rewording it.");

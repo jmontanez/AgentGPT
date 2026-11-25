@@ -23,10 +23,20 @@ function writeUsed(n: number) {
   }
 }
 
+// Scene 1 opens with hook 1. Swap in the chosen hook but keep anything the scene says after it.
+function sceneLine(script: Script, hookIndex: number, i: number): string {
+  const scene = script.scenes[i];
+  const chosen = script.hooks[hookIndex]?.line;
+  if (i !== 0 || hookIndex === 0 || !chosen) return scene.voiceover;
+  const original = script.hooks[0]?.line ?? "";
+  if (original && scene.voiceover.includes(original)) return scene.voiceover.replace(original, chosen);
+  return chosen;
+}
+
 function scriptToText(script: Script, hookIndex: number): string {
   const hook = script.hooks[hookIndex];
   const scenes = script.scenes.map((s, i) => {
-    const line = i === 0 && hook ? hook.line : s.voiceover;
+    const line = sceneLine(script, hookIndex, i);
     const overlay = s.onScreenText ? `\n   Text: ${s.onScreenText}` : "";
     return `${s.start}–${s.end}s · ${s.shot}\n   Say: ${line}${overlay}`;
   });
@@ -60,8 +70,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea, platform, lengthSeconds }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.script) throw new Error(data.error ?? "Something went wrong. Try again.");
       setScript(data.script);
       setHookIndex(0);
       const next = used + 1;
@@ -161,7 +171,7 @@ export default function Home() {
                 <div key={i} className="scene">
                   <div className="scene-time">{s.start}–{s.end}s</div>
                   <div className="scene-body">
-                    <div>{i === 0 ? script.hooks[hookIndex]?.line : s.voiceover}</div>
+                    <div>{sceneLine(script, hookIndex, i)}</div>
                     <div className="scene-shot">{s.shot}</div>
                     {s.onScreenText && <div className="scene-text"><b>Text:</b> {s.onScreenText}</div>}
                   </div>
