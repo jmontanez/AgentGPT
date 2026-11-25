@@ -12,6 +12,7 @@ What makes these videos work:
 - Write the three hooks in three genuinely different styles (for example bold claim, curiosity gap, contrarian, relatable pain, result-first). Hook 1 is your strongest.
 - Every scene should earn the next one: deliver a payoff or raise a new question. Cut anything that doesn't.
 - Write voiceover the way people talk: short sentences, contractions, concrete details from the creator's idea. Never invent facts, numbers or credentials the creator didn't give; use a [bracketed placeholder] instead.
+- The same goes for claims about results and about the creator: don't state outcomes ("nothing gets wasted", "it doubled my sales"), feelings ("the hardest part of my day") or opinions they didn't express. Hooks, on-screen text and the caption follow this rule too. If a line needs one, write it as a placeholder, e.g. [how you feel about closing time].
 - On-screen text is a short overlay that reinforces the line, readable in under a second.
 - Scene timings must start at 0 and end exactly at the requested length, with no gaps.
 - The caption reads like the creator wrote it and works as search text. Do not add a wall of hashtags.
