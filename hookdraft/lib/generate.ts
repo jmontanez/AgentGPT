@@ -20,24 +20,41 @@ What makes these videos work:
 const client = new Anthropic();
 
 export class GenerationRefused extends Error {}
+export class MissingCredentials extends Error {}
+
+// The SDK throws a plain Error (not an APIError) when it finds no API key, auth token or
+// `ant auth login` profile, before any request is sent. There is no typed class for it.
+function isMissingCredentials(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    !(error instanceof Anthropic.APIError) &&
+    error.message.startsWith("Could not resolve authentication method")
+  );
+}
 
 export async function generateScript(req: GenerateRequest): Promise<Script> {
   if (process.env.HOOKDRAFT_MOCK === "1") return SAMPLE_SCRIPT;
 
-  const response = await client.beta.messages.parse({
-    model: "claude-opus-5-5",
-    max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: "medium", format: betaZodOutputFormat(Script) },
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`,
-      },
-    ],
-  });
+  let response;
+  try {
+    response = await client.beta.messages.parse({
+      model: "claude-opus-5-5",
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "medium", format: betaZodOutputFormat(Script) },
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`,
+        },
+      ],
+    });
+  } catch (error) {
+    if (isMissingCredentials(error)) throw new MissingCredentials("No Claude API key is configured.");
+    throw error;
+  }
 
   if (response.stop_reason === "refusal") {
     throw new GenerationRefused("This idea couldn't be scripted. Try rewording it.");

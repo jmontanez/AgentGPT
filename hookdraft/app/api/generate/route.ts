@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { GenerateRequest } from "@/lib/schema";
-import { generateScript, GenerationRefused } from "@/lib/generate";
+import { generateScript, GenerationRefused, MissingCredentials } from "@/lib/generate";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (error instanceof Anthropic.RateLimitError) {
       return NextResponse.json({ error: "Busy right now. Try again in a minute." }, { status: 429 });
     }
-    if (error instanceof Anthropic.AuthenticationError) {
+    if (error instanceof MissingCredentials || error instanceof Anthropic.AuthenticationError) {
       console.error("Claude API authentication failed", error.message);
       return NextResponse.json({ error: "The server isn't set up with a Claude API key yet." }, { status: 500 });
     }
