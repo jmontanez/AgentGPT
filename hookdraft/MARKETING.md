@@ -54,6 +54,10 @@ One funnel, weekly: **views → link clicks or HOOK comments → free script →
 
 ## Reference reels
 
+- https://www.instagram.com/reel/DfdM34dpiKp/ ("Copy this $30M/year AI app's onboarding", 3 tips)
+  - Product: sign-in at the end (the founder's biggest conversion win), more questions (time invested raises conversion), animated screens. HookDraft now shows the hooks before sign-in and has optional niche and tone questions.
+  - Format worth copying: "Copy this [successful app]'s [thing]", the founder's own quotes on screen as proof, numbered tips, then a freebie for a comment ("comment ONBOARDING for the checklist"). HookDraft's version: "comment HOOK for my hook checklist", which also starts DMs.
+
 - https://www.instagram.com/reel/DfFdUJLlSl9/ ("Here is how to get free users for your app")
   - Five launch sites: r/SideProject, Hacker News (Show HN), Product Hunt (Tue–Thu), Indie Hackers, Uneed.
   - Closing line worth borrowing: "You didn't build the wrong app. You showed it to the wrong people."

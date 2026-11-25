@@ -109,6 +109,12 @@ button, textarea, select { font: inherit; color: inherit; }
 .notice-ok { border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px; font-size: 14px; }
 .account { display: flex; gap: 14px; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); padding-top: 12px; border-top: 1px solid var(--border); }
 
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.locked { position: relative; }
+.locked-body { display: flex; flex-direction: column; gap: 10px; filter: blur(3px); opacity: 0.5; }
+.locked-line { height: 16px; border-radius: 8px; background: var(--surface-2); }
+.locked-line:nth-child(3n+1) { width: 92%; } .locked-line:nth-child(3n+2) { width: 70%; } .locked-line:nth-child(3n) { width: 84%; }
+
 /* Variations */
 .btn-variations { border-color: var(--accent); color: var(--accent); background: transparent; }
 .hint { margin: -10px 0 0; font-size: 13px; color: var(--muted); }

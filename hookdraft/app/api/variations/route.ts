@@ -10,7 +10,7 @@ export const maxDuration = 120;
 export async function POST(request: Request) {
   const body = await readBody(request, VariationsRequest);
   if ("response" in body) return body.response;
-  const gate = await checkAllowance("variations");
+  const gate = await checkAllowance("variations", request);
   if (!gate.ok) return gate.response;
   try {
     const variations = await generateVariations(body.data);

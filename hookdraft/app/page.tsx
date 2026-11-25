@@ -1,11 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LENGTHS, PLATFORMS, type Script, type Variation } from "@/lib/schema";
+import { LENGTHS, NICHES, PLATFORMS, TONES, type Script, type Variation } from "@/lib/schema";
 import { SAMPLE_SCRIPT } from "@/lib/sample";
 
 type Platform = (typeof PLATFORMS)[number];
 type Length = (typeof LENGTHS)[number];
+type Niche = (typeof NICHES)[number];
+type Tone = (typeof TONES)[number];
+type Brief = { idea: string; platform: Platform; lengthSeconds: Length; niche?: Niche; tone?: Tone };
+type Preview = { hooks: Script["hooks"]; sceneCount: number };
 
 // One tap fills the form, so a first-time visitor gets to a real script without having to think of an idea.
 const EXAMPLE_IDEAS: { label: string; idea: string; platform: Platform; lengthSeconds: Length }[] = [
@@ -22,12 +26,13 @@ type Me =
 
 type Panel = null | "signin" | "paywall";
 
-// The idea survives the trip out to the sign-in email and Stripe and back.
+// The idea (and a script waiting to be unlocked) survives the trip out to the sign-in email and back.
 const DRAFT_KEY = "hookdraft.draft";
-function saveDraft(d: { idea: string; platform: Platform; lengthSeconds: Length }) {
+type Draft = Brief & { pendingId?: string };
+function saveDraft(d: Draft) {
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* storage blocked */ }
 }
-function takeDraft(): { idea: string; platform: Platform; lengthSeconds: Length } | null {
+function takeDraft(): Draft | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
     localStorage.removeItem(DRAFT_KEY);
@@ -67,6 +72,10 @@ export default function Home() {
   const [idea, setIdea] = useState("");
   const [platform, setPlatform] = useState<Platform>("Instagram Reels");
   const [lengthSeconds, setLengthSeconds] = useState<Length>(30);
+  const [niche, setNiche] = useState<Niche | undefined>();
+  const [tone, setTone] = useState<Tone | undefined>();
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [claiming, setClaiming] = useState(false);
   const [script, setScript] = useState<Script | null>(null);
   const [hookIndex, setHookIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -76,7 +85,7 @@ export default function Home() {
   const [scriptKey, setScriptKey] = useState(0);
   const [shownLength, setShownLength] = useState<Length>(30);
   // The idea/platform/length the current script was made from, so variations match it even if the form changed since.
-  const [source, setSource] = useState<{ idea: string; platform: Platform; lengthSeconds: Length } | null>(null);
+  const [source, setSource] = useState<Brief | null>(null);
   const [variations, setVariations] = useState<Variation[] | null>(null);
   const [varLoading, setVarLoading] = useState(false);
   const [active, setActive] = useState(0); // 0 = original, 1..n = variations
@@ -99,7 +108,7 @@ export default function Home() {
   // On load: restore a saved idea, and react to coming back from the sign-in email or Stripe.
   useEffect(() => {
     const draft = takeDraft();
-    if (draft) { setIdea(draft.idea); setPlatform(draft.platform); setLengthSeconds(draft.lengthSeconds); }
+    if (draft) { setIdea(draft.idea); setPlatform(draft.platform); setLengthSeconds(draft.lengthSeconds); setNiche(draft.niche); setTone(draft.tone); }
     const params = new URLSearchParams(window.location.search);
     if (params.get("signin") === "failed") setError("That sign-in link didn't work or has expired. Send a new one.");
     const checkout = params.get("checkout");
@@ -108,6 +117,9 @@ export default function Home() {
 
     void (async () => {
       let data = await refreshMe();
+      // Back from the sign-in email with a script waiting: unlock it.
+      if (draft?.pendingId && data?.accounts && data.signedIn) await claim(draft);
+      else if (draft?.pendingId) saveDraft(draft); // not signed in yet; keep it for next time
       if (checkout === "success") {
         setNotice("You're in. Your subscription is starting…");
         // Stripe tells the server a moment after the redirect, so check a few times.
@@ -134,10 +146,42 @@ export default function Home() {
     return `${left} free ${left === 1 ? "script" : "scripts"} left`;
   }
 
+  const brief = (): Brief => ({ idea, platform, lengthSeconds, niche, tone });
+
+  function showScript(next: Script, from: Brief) {
+    setScript(next);
+    setSource(from);
+    setPreview(null);
+    setVariations(null);
+    setActive(0);
+    setShownLength(from.lengthSeconds);
+    setScriptKey((k) => k + 1);
+    setHookIndex(0);
+  }
+
+  async function claim(draft: Draft) {
+    setClaiming(true);
+    try {
+      const { res, data } = await postJson("/api/claim", { id: draft.pendingId });
+      if (res.ok && data.script) {
+        showScript(data.script, data.request ?? draft);
+        setNotice("You're signed in. Here's your full script.");
+      } else if (res.status === 402) {
+        setPanel("paywall");
+        setError("You've already used your free script on this account.");
+      } else {
+        setError(data.error ?? "Couldn't unlock that script. Generate it again.");
+      }
+      void refreshMe();
+    } finally {
+      setClaiming(false);
+    }
+  }
+
   // Handles the account-related answers from the generate and variations endpoints.
   function handleGate(res: Response, data: { code?: string; error?: string }): boolean {
     if (res.status === 401 && data.code === "signin") {
-      saveDraft({ idea, platform, lengthSeconds });
+      saveDraft(brief());
       setPanel("signin");
       return true;
     }
@@ -150,23 +194,25 @@ export default function Home() {
   }
 
   async function generate() {
-    if (me?.accounts && !me.signedIn) { saveDraft({ idea, platform, lengthSeconds }); setPanel("signin"); return; }
     if (!canWrite) { setPanel("paywall"); return; }
     setLoading(true);
     setError(null);
     setNotice(null);
     setCopied(false);
     try {
-      const { res, data } = await postJson("/api/generate", { idea, platform, lengthSeconds });
+      const from = brief();
+      const { res, data } = await postJson("/api/generate", from);
       if (handleGate(res, data)) return;
+      if (res.ok && data.preview && data.pendingId) {
+        // Not signed in: show the hooks now, unlock the rest with the email link.
+        setScript(null);
+        setPreview(data.preview);
+        setScriptKey((k) => k + 1);
+        saveDraft({ ...from, pendingId: data.pendingId });
+        return;
+      }
       if (!res.ok || !data.script) throw new Error(data.error ?? "Something went wrong. Try again.");
-      setScript(data.script);
-      setSource({ idea, platform, lengthSeconds });
-      setVariations(null);
-      setActive(0);
-      setShownLength(lengthSeconds);
-      setScriptKey((k) => k + 1);
-      setHookIndex(0);
+      showScript(data.script, from);
       void refreshMe();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -247,7 +293,7 @@ export default function Home() {
           onChange={(e) => setIdea(e.target.value)}
           maxLength={2000}
         />
-        {!script && (
+        {!script && !preview && (
           <div className="examples">
             <span className="examples-label">Or try one:</span>
             {EXAMPLE_IDEAS.map((ex) => (
@@ -279,21 +325,39 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="field">
+        <span className="label">Optional: niche and tone</span>
+        <div className="examples" role="group" aria-label="Niche">
+          {NICHES.map((n) => (
+            <button key={n} type="button" className="chip" aria-pressed={niche === n} onClick={() => setNiche(niche === n ? undefined : n)}>{n}</button>
+          ))}
+        </div>
+        <div className="examples" role="group" aria-label="Tone">
+          {TONES.map((t) => (
+            <button key={t} type="button" className="chip" aria-pressed={tone === t} onClick={() => setTone(tone === t ? undefined : t)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
       {panel === "signin" ? (
         <SignIn onClose={() => setPanel(null)} />
       ) : panel === "paywall" || (signedIn && !subscribed && !canWrite) ? (
         <Paywall onError={setError} />
       ) : (
-        <button type="button" className="btn btn-primary" onClick={generate} disabled={loading || varLoading || idea.trim().length < 10}>
-          {loading ? "Writing your script…" : script ? "Generate a new script" : "Generate script"}
+        <button type="button" className="btn btn-primary" onClick={generate} disabled={loading || varLoading || claiming || idea.trim().length < 10}>
+          {loading ? "Writing your script…" : claiming ? "Unlocking your script…" : script || preview ? "Generate a new script" : "Generate script"}
         </button>
       )}
 
       {notice && <div className="notice-ok" role="status">{notice}</div>}
       {error && <div className="error" role="alert">{error}</div>}
 
-      {loading ? (
+      {loading || claiming ? (
         <ScriptSkeleton />
+      ) : preview ? (
+        <div className="reveal" key={scriptKey}>
+          <LockedScript preview={preview} />
+        </div>
       ) : script && shown ? (
         <div className="reveal" key={scriptKey}>
           {variations && (
@@ -342,7 +406,7 @@ export default function Home() {
   );
 }
 
-function SignIn({ onClose }: { onClose: () => void }) {
+function SignIn({ onClose, title = "Your first script is free." }: { onClose?: () => void; title?: string }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [err, setErr] = useState<string | null>(null);
@@ -366,12 +430,39 @@ function SignIn({ onClose }: { onClose: () => void }) {
   }
   return (
     <form className="notice" onSubmit={send}>
-      <div><b>Your first script is free.</b> Enter your email and we'll send a one-tap sign-in link. No password.</div>
+      <div><b>{title}</b> Enter your email and we'll send a one-tap sign-in link. No password.</div>
       <input className="input" type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
       {err && <div className="error">{err}</div>}
       <button type="submit" className="btn btn-primary" disabled={state === "sending"}>{state === "sending" ? "Sending…" : "Email me a sign-in link"}</button>
-      <button type="button" className="link" onClick={onClose}>Not now</button>
+      {onClose && <button type="button" className="link" onClick={onClose}>Not now</button>}
     </form>
+  );
+}
+
+// Shown to visitors who generated before signing in: the hooks are real, the rest unlocks by email.
+function LockedScript({ preview }: { preview: Preview }) {
+  return (
+    <div className="script">
+      <section className="field">
+        <h2 className="label" style={{ margin: 0 }}>Your 3 hooks</h2>
+        <div className="hooks">
+          {preview.hooks.map((h, i) => (
+            <div key={i} className="hook">
+              <span className="hook-style">{h.style}</span>
+              <span className="hook-line">{h.line}</span>
+              <span className="hook-why">{h.why}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="field locked">
+        <h2 className="label" style={{ margin: 0 }}>Scenes, on-screen text and caption</h2>
+        <div className="locked-body" aria-hidden="true">
+          {Array.from({ length: Math.max(3, preview.sceneCount) }, (_, i) => <div key={i} className="locked-line" />)}
+        </div>
+        <SignIn title={`Your script is ready: ${preview.sceneCount} scenes plus a caption.`} />
+      </section>
+    </div>
   );
 }
 

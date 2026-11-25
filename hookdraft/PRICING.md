@@ -6,7 +6,7 @@ Decided 2026-11-25.
 
 | | |
 |---|---|
-| Free | 1 script, no card |
+| Free | 1 script, no card. Hooks show before sign-in; the full script unlocks with an email link |
 | Monthly | **$19/month** |
 | Yearly | **$149/year** (about $12.42/month, ~35% off) |
 | Trial | 7 days free, **card required up front** |

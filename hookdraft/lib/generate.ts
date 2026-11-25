@@ -21,6 +21,7 @@ What makes these videos work:
 - On-screen text is a short overlay that reinforces the line, readable in under a second.
 - Scene timings must start at 0 and end exactly at the requested length, with no gaps.
 - The caption reads like the creator wrote it and works as search text. Do not add a wall of hashtags.
+- If the creator names a niche, write for that audience (their words, their problems). If they pick a tone, write the whole script in it.
 - End with one clear call to action that fits the video (follow for part 2, comment a word, save it).`;
 
 // HOOKDRAFT_ANTHROPIC_API_KEY takes priority: some hosts (including Claude Code cloud sessions)
@@ -32,7 +33,12 @@ export class MissingApiKey extends Error {}
 
 export async function generateScript(req: GenerateRequest): Promise<Script> {
   if (process.env.HOOKDRAFT_MOCK === "1") return SAMPLE_SCRIPT;
-  return callClaude(Script, `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`);
+  return callClaude(Script, briefFor(req));
+}
+
+function briefFor(req: GenerateRequest): string {
+  const extras = [req.niche && `Niche: ${req.niche}`, req.tone && `Tone: ${req.tone}`].filter(Boolean).join("\n");
+  return `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds${extras ? `\n${extras}` : ""}\n\nMy idea:\n${req.idea}`;
 }
 
 // Each variation gets its own angle so the three don't come back as near-copies of each other.
@@ -46,7 +52,7 @@ export async function generateVariations(req: VariationsRequest): Promise<Variat
   if (process.env.HOOKDRAFT_MOCK === "1") {
     return VARIATION_ANGLES.map((_, i) => ({ ...SAMPLE_SCRIPT, changed: `Sample variation ${i + 1}.` }));
   }
-  const base = `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}\n\nThis script already worked for me:\n${JSON.stringify(req.script)}\n\n`;
+  const base = `${briefFor(req)}\n\nThis script already worked for me:\n${JSON.stringify(req.script)}\n\n`;
   const results = await Promise.allSettled(
     VARIATION_ANGLES.map((angle, i) =>
       callClaude(

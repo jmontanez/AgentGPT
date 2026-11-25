@@ -2,11 +2,16 @@ import { z } from "zod";
 
 export const PLATFORMS = ["Instagram Reels", "TikTok", "YouTube Shorts"] as const;
 export const LENGTHS = [15, 30, 60] as const;
+export const NICHES = ["Fitness", "Food", "Business", "Beauty", "Tech", "Education", "Lifestyle", "Local business"] as const;
+export const TONES = ["Funny", "Educational", "Storytelling", "Bold"] as const;
 
 export const GenerateRequest = z.object({
   idea: z.string().trim().min(10, "Give a little more detail (10+ characters).").max(2000),
   platform: z.enum(PLATFORMS),
   lengthSeconds: z.union([z.literal(15), z.literal(30), z.literal(60)]),
+  // Optional answers that tune the script to the creator's audience and voice.
+  niche: z.enum(NICHES).optional(),
+  tone: z.enum(TONES).optional(),
 });
 export type GenerateRequest = z.infer<typeof GenerateRequest>;
 
