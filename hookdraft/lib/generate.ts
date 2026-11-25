@@ -17,7 +17,9 @@ What makes these videos work:
 - The caption reads like the creator wrote it and works as search text. Do not add a wall of hashtags.
 - End with one clear call to action that fits the video (follow for part 2, comment a word, save it).`;
 
-const client = new Anthropic();
+// HOOKDRAFT_ANTHROPIC_API_KEY takes priority: some hosts (including Claude Code cloud sessions)
+// don't pass ANTHROPIC_API_KEY through to the app. Leaving both unset falls back to the SDK's defaults.
+const client = new Anthropic({ apiKey: process.env.HOOKDRAFT_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || undefined });
 
 export class GenerationRefused extends Error {}
 export class MissingApiKey extends Error {}
