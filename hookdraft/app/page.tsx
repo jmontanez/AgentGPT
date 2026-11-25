@@ -87,12 +87,14 @@ export default function Home() {
   return (
     <main className="page">
       <div className="topbar">
-        <div className="brand">HookDraft</div>
+        <div className="brand">hook<span>draft</span></div>
         <div className="quota">{left} free {left === 1 ? "script" : "scripts"} left</div>
       </div>
 
+      <h1 className="headline">Dump the idea.<br />Get the reel.</h1>
+
       <div className="field">
-        <label className="label" htmlFor="idea">Your idea</label>
+        <label className="label" htmlFor="idea">Brain-dump</label>
         <textarea
           id="idea"
           className="idea"
