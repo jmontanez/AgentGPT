@@ -22,10 +22,22 @@ To test real generation, run the dev server without `HOOKDRAFT_MOCK`, then `node
 - `lib/generate.ts`: the Claude call (`claude-opus-5-5`, structured output against the schema in `lib/schema.ts`, server-side fallback on refusals).
 - `app/globals.css`: theme tokens at the top; swap them to apply a different look.
 
-## Not done yet
+## Accounts and payments
 
-- **Replace the API key before going live.** The current "Hookdraft" key is a 30-day testing key (expires Dec 25, 2026). Make a new production key with a longer expiry, set it in the hosting provider's environment variables, then delete the testing key in the Claude Console.
+Pricing and the reasoning behind it are in [PRICING.md](PRICING.md): 1 free script, then $19/month or $149/year with a 7-day trial (card required), 100 scripts a month fair use, variations count as 3.
 
-- The 1-free-script limit (`FREE_SCRIPTS` in `app/page.tsx`) is stored in the browser, so it's easy to get around. Before launch, add sign-in and count usage on the server.
-- Payments: set `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` to a Stripe Payment Link. Paid accounts aren't recognized yet.
-- No rate limiting on `/api/generate`.
+- **Sign-in:** Supabase email links (no passwords). Without the three Supabase settings the app runs with no accounts and no limits, which is how local development and `scripts/smoke.mjs` work. In production it refuses to generate without them, so a missing setting can't mean unlimited free scripts.
+- **Limits:** enforced on the server in `lib/billing.ts`, from the `usage` table. Failed generations don't count. Each user is also limited to 6 generations a minute.
+- **Payments:** Stripe Checkout (`/api/checkout`), the Stripe billing portal (`/api/portal`), and a webhook (`/api/stripe/webhook`) that copies the subscription status onto the user's profile.
+
+### Setting it up
+
+1. **Supabase:** create a project and run `supabase/migrations/0001_billing.sql` on it. Under Authentication → URL Configuration, set the Site URL and add `<site>/auth/callback` as a redirect URL. Copy the project URL, publishable key and secret key into the environment.
+2. **Stripe (test mode first):** create a "HookDraft" product with two recurring prices, $19/month and $149/year, and put their price IDs in `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_YEARLY`. Add a webhook endpoint at `<site>/api/stripe/webhook` for `checkout.session.completed` and `customer.subscription.created/updated/deleted`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`. Turn on the customer portal (Settings → Billing → Customer portal).
+3. **Hosting:** set every variable in `.env.example` in the host's environment settings.
+
+## Before launch
+
+- **Replace the API key.** The current "Hookdraft" key is a 30-day testing key (expires Dec 25, 2026). Make a new production key with a longer expiry, set it in the hosting provider's environment variables, then delete the testing key in the Claude Console.
+- Switch Stripe to live mode: recreate the product and prices in live mode, add a live webhook, and swap in the live keys and price IDs.
+- Two requests sent at the same moment can both pass the limit check. The per-minute rate limit keeps this small; a database-side check would close it fully.

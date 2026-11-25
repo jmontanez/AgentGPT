@@ -101,6 +101,14 @@ button, textarea, select { font: inherit; color: inherit; }
   .btn, .chip { transition: none; }
 }
 
+/* Accounts and paywall */
+.input { height: 46px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 12px; background: var(--bg); font-size: 15px; }
+.link { background: none; border: none; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 13px; align-self: flex-start; }
+.paywall { border-color: var(--accent); }
+.fine { font-size: 12px; color: var(--muted); }
+.notice-ok { border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px; font-size: 14px; }
+.account { display: flex; gap: 14px; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); padding-top: 12px; border-top: 1px solid var(--border); }
+
 /* Variations */
 .btn-variations { border-color: var(--accent); color: var(--accent); background: transparent; }
 .hint { margin: -10px 0 0; font-size: 13px; color: var(--muted); }
