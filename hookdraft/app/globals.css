@@ -1,0 +1,59 @@
+/* Theme tokens. The chosen look from the design canvas gets applied here. */
+:root {
+  --bg: #ffffff;
+  --surface: #f7f8fa;
+  --border: #e3e5ea;
+  --text: #111318;
+  --muted: #4a4f5c;
+  --accent: #2457f5;
+  --accent-text: #ffffff;
+  --strong: #111318;
+  --strong-text: #ffffff;
+  --radius: 12px;
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+button, textarea, select { font: inherit; color: inherit; }
+
+.page { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; }
+.brand { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+.quota { font-size: 13px; color: var(--muted); }
+
+.label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.idea { min-height: 88px; resize: vertical; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 15px; line-height: 1.4; background: var(--surface); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > .field { flex: 1 1 140px; }
+.select { height: 44px; border: 1px solid var(--border); border-radius: var(--radius); padding: 0 10px; background: var(--bg); }
+
+.btn { min-height: 48px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); font-weight: 600; font-size: 15px; cursor: pointer; padding: 0 16px; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn-primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.btn-strong { background: var(--strong); color: var(--strong-text); border-color: var(--strong); }
+.actions { display: flex; gap: 10px; }
+.actions .btn { flex: 1; }
+
+.error { border: 1px solid #d93025; color: #b3261e; background: #fdecea; border-radius: var(--radius); padding: 12px; font-size: 14px; }
+.notice { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 14px; font-size: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+.hooks { display: flex; flex-direction: column; gap: 10px; }
+.hook { text-align: left; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--bg); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.hook[aria-pressed="true"] { border: 2px solid var(--accent); padding: 11px; }
+.hook-style { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.hook[aria-pressed="true"] .hook-style { color: var(--accent); }
+.hook-line { font-size: 16px; font-weight: 600; }
+.hook-why { font-size: 13px; color: var(--muted); }
+
+.scenes { display: flex; flex-direction: column; gap: 12px; }
+.scene { display: grid; grid-template-columns: 64px 1fr; gap: 4px 12px; font-size: 14px; line-height: 1.4; }
+.scene-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.scene-body { display: flex; flex-direction: column; gap: 2px; }
+.scene-shot { color: var(--muted); font-size: 13px; }
+.scene-text { font-size: 13px; }
+.scene-text b { font-weight: 600; }
+
+.caption { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 14px; line-height: 1.45; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
