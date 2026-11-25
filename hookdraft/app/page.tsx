@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LENGTHS, PLATFORMS, type Script } from "@/lib/schema";
+import { LENGTHS, PLATFORMS, type Script, type Variation } from "@/lib/schema";
 import { SAMPLE_SCRIPT } from "@/lib/sample";
 
 // One free script to show what HookDraft does, then the upgrade link.
@@ -67,6 +67,13 @@ export default function Home() {
   const [used, setUsed] = useState(0);
   const [scriptKey, setScriptKey] = useState(0);
   const [shownLength, setShownLength] = useState<Length>(30);
+  // The idea/platform/length the current script was made from, so variations match it even if the form changed since.
+  const [source, setSource] = useState<{ idea: string; platform: Platform; lengthSeconds: Length } | null>(null);
+  const [variations, setVariations] = useState<Variation[] | null>(null);
+  const [varLoading, setVarLoading] = useState(false);
+  const [active, setActive] = useState(0); // 0 = original, 1..n = variations
+
+  const shown: Script | null = active > 0 && variations ? variations[active - 1] ?? script : script;
 
   useEffect(() => setUsed(readUsed()), []);
 
@@ -87,12 +94,13 @@ export default function Home() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.script) throw new Error(data.error ?? "Something went wrong. Try again.");
       setScript(data.script);
+      setSource({ idea, platform, lengthSeconds });
+      setVariations(null);
+      setActive(0);
       setShownLength(lengthSeconds);
       setScriptKey((k) => k + 1);
       setHookIndex(0);
-      const next = used + 1;
-      setUsed(next);
-      writeUsed(next);
+      spendOne();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -100,10 +108,48 @@ export default function Home() {
     }
   }
 
-  async function copy() {
-    if (!script) return;
+  function spendOne() {
+    const next = used + 1;
+    setUsed(next);
+    writeUsed(next);
+  }
+
+  // Three new takes on a script that worked, to post as separate videos. Counts as one script.
+  async function makeVariations() {
+    if (outOfFree || !script || !source) return;
+    setVarLoading(true);
+    setError(null);
+    setCopied(false);
     try {
-      await navigator.clipboard.writeText(scriptToText(script, hookIndex));
+      const res = await fetch("/api/variations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...source, script }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !Array.isArray(data.variations)) throw new Error(data.error ?? "Something went wrong. Try again.");
+      setVariations(data.variations);
+      setActive(1);
+      setHookIndex(0);
+      setScriptKey((k) => k + 1);
+      spendOne();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setVarLoading(false);
+    }
+  }
+
+  function showVersion(i: number) {
+    setActive(i);
+    setHookIndex(0);
+    setCopied(false);
+  }
+
+  async function copy() {
+    if (!shown) return;
+    try {
+      await navigator.clipboard.writeText(scriptToText(shown, hookIndex));
       setCopied(true);
     } catch {
       setError("Couldn't copy. Select the text and copy it manually.");
@@ -182,13 +228,33 @@ export default function Home() {
 
       {loading ? (
         <ScriptSkeleton />
-      ) : script ? (
+      ) : script && shown ? (
         <div className="reveal" key={scriptKey}>
-          <ScriptView script={script} hookIndex={hookIndex} lengthSeconds={shownLength} onPickHook={(i) => { setHookIndex(i); setCopied(false); }} />
+          {variations && (
+            <div className="tabs" role="tablist" aria-label="Script versions">
+              {["Original", ...variations.map((_, i) => `Variation ${i + 1}`)].map((name, i) => (
+                <button key={name} type="button" role="tab" aria-selected={i === active} className="tab" onClick={() => showVersion(i)}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+          {active > 0 && variations?.[active - 1] && <div className="changed">{variations[active - 1].changed}</div>}
+          <ScriptView key={active} script={shown} hookIndex={hookIndex} lengthSeconds={shownLength} onPickHook={(i) => { setHookIndex(i); setCopied(false); }} />
           <div className="actions">
-            <button type="button" className="btn" onClick={generate} disabled={loading || outOfFree}>Regenerate</button>
+            <button type="button" className="btn" onClick={generate} disabled={loading || varLoading || outOfFree}>Regenerate</button>
             <button type="button" className="btn btn-strong" onClick={copy}>{copied ? "Copied" : "Copy script"}</button>
           </div>
+          {!variations && (
+            <button type="button" className="btn btn-variations" onClick={makeVariations} disabled={varLoading || outOfFree}>
+              {varLoading ? "Writing 3 variations…" : "Make 3 variations to post next"}
+            </button>
+          )}
+          {!variations && (
+            <p className="hint">
+              {outOfFree ? "Variations count as one script. Upgrade to make them." : "Same core idea, three fresh angles, so you can repost what works without repeating yourself. Counts as one script."}
+            </p>
+          )}
         </div>
       ) : (
         <div className="preview" aria-label="Example of what you'll get">

@@ -13,7 +13,7 @@ npm run dev                  # http://localhost:3100
 
 Set `HOOKDRAFT_MOCK=1` to get a sample script without calling the API.
 
-To test real generation, run the dev server without `HOOKDRAFT_MOCK`, then `node scripts/smoke.mjs`. It scripts four ideas across Reels, TikTok and Shorts, prints them, and flags hook-count or timing problems.
+To test real generation, run the dev server without `HOOKDRAFT_MOCK`, then `node scripts/smoke.mjs`. It scripts four ideas across Reels, TikTok and Shorts, makes variations of the first, prints everything, and flags hook-count or timing problems.
 
 ## How it works
 

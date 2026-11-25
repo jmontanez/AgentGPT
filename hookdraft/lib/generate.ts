@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { Script, type GenerateRequest } from "./schema";
+import { Script, Variation, type GenerateRequest, type VariationsRequest } from "./schema";
 import { SAMPLE_SCRIPT } from "./sample";
 
 const SYSTEM_PROMPT = `You write short-form video scripts for creators on Instagram Reels, TikTok and YouTube Shorts.
@@ -31,21 +32,45 @@ export class MissingApiKey extends Error {}
 
 export async function generateScript(req: GenerateRequest): Promise<Script> {
   if (process.env.HOOKDRAFT_MOCK === "1") return SAMPLE_SCRIPT;
+  return callClaude(Script, `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`);
+}
 
+// Each variation gets its own angle so the three don't come back as near-copies of each other.
+const VARIATION_ANGLES = [
+  "New opening: three new hooks in different styles from the original's, and a different first scene. The body can stay close to the original.",
+  "Same points, new framing: change the order (for example lead with the payoff or the most surprising point), reword every line, and use a different call to action.",
+  "Different format: tell it as a POV, a story, a myth-vs-fact, or a before-and-after (whichever suits the idea and is furthest from the original's format).",
+];
+
+export async function generateVariations(req: VariationsRequest): Promise<Variation[]> {
+  if (process.env.HOOKDRAFT_MOCK === "1") {
+    return VARIATION_ANGLES.map((_, i) => ({ ...SAMPLE_SCRIPT, changed: `Sample variation ${i + 1}.` }));
+  }
+  const base = `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}\n\nThis script already worked for me:\n${JSON.stringify(req.script)}\n\n`;
+  const results = await Promise.allSettled(
+    VARIATION_ANGLES.map((angle, i) =>
+      callClaude(
+        Variation,
+        base +
+          `Write a variation of that script I can post as a new video. Keep the core idea, every fact, and every [placeholder] from the original; don't add new claims about me. It must feel fresh to someone who saw the original: new hook lines, reworded voiceover, new on-screen text and a new caption.\n\nWhat to change: ${angle}\n\nTwo other variations are being written separately with these briefs, so don't open the way they would or reuse their framing:\n${VARIATION_ANGLES.filter((_, j) => j !== i).map((a) => `- ${a}`).join("\n")}`,
+      ),
+    ),
+  );
+  const ok = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  if (ok.length === 0) throw (results[0] as PromiseRejectedResult).reason;
+  return ok;
+}
+
+async function callClaude<T extends typeof Script | typeof Variation>(schema: T, userMessage: string) {
   const response = await client.beta.messages
     .parse({
       model: "claude-opus-5-5",
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      output_config: { effort: "medium", format: betaZodOutputFormat(Script) },
+      output_config: { effort: "medium", format: betaZodOutputFormat(schema) },
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: `Platform: ${req.platform}\nLength: ${req.lengthSeconds} seconds\n\nMy idea:\n${req.idea}`,
-        },
-      ],
+      messages: [{ role: "user", content: userMessage }],
     })
     .catch((error: unknown) => {
       // The SDK throws a plain Error, before any request is sent, when no key or login is configured.
@@ -61,5 +86,5 @@ export async function generateScript(req: GenerateRequest): Promise<Script> {
   if (!response.parsed_output) {
     throw new Error(`Script came back incomplete (stop reason: ${response.stop_reason}).`);
   }
-  return response.parsed_output;
+  return response.parsed_output as z.infer<T>;
 }

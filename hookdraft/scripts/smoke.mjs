@@ -26,6 +26,7 @@ function problems(script, length) {
 }
 
 let failed = 0;
+let firstOk = null;
 for (const req of IDEAS) {
   const t = Date.now();
   const res = await fetch(`${base}/api/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
@@ -38,5 +39,24 @@ for (const req of IDEAS) {
   console.log(`Caption: ${s.caption}\nCTA: ${s.cta}`);
   const p = problems(s, req.lengthSeconds);
   if (p.length) { failed++; console.log("PROBLEMS:", p.join("; ")); } else console.log("OK");
+  firstOk ??= { req, script: s };
+}
+
+// Variations of the first script that worked: each must be a valid script of the same length.
+if (firstOk) {
+  const t = Date.now();
+  const res = await fetch(`${base}/api/variations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...firstOk.req, script: firstOk.script }) });
+  const data = await res.json().catch(() => ({}));
+  console.log(`\n=== Variations of: ${firstOk.req.idea}  (${res.status}, ${((Date.now() - t) / 1000).toFixed(1)}s)`);
+  if (!res.ok) { failed++; console.log("ERROR:", data.error); }
+  else {
+    if (data.variations.length !== 3) { failed++; console.log(`PROBLEMS: expected 3 variations, got ${data.variations.length}`); }
+    data.variations.forEach((v, i) => {
+      const p = problems(v, firstOk.req.lengthSeconds);
+      if (!v.changed) p.push("missing 'changed' note");
+      console.log(`Variation ${i + 1}: ${v.changed}\n  Hook 1: ${v.hooks[0]?.line}\n  ${p.length ? "PROBLEMS: " + p.join("; ") : "OK"}`);
+      if (p.length) failed++;
+    });
+  }
 }
 process.exit(failed ? 1 : 0);

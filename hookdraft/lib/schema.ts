@@ -35,3 +35,11 @@ export const Script = z.object({
   cta: z.string().describe("The closing call to action"),
 });
 export type Script = z.infer<typeof Script>;
+
+export const Variation = Script.extend({
+  changed: z.string().describe("One short sentence telling the creator what's different from the original"),
+});
+export type Variation = z.infer<typeof Variation>;
+
+export const VariationsRequest = GenerateRequest.extend({ script: Script });
+export type VariationsRequest = z.infer<typeof VariationsRequest>;
